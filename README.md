@@ -1,3 +1,5 @@
+[![Gem Version Badge](https://img.shields.io/gem/v/hiera-consul.svg)](https://rubygems.org/gems/hiera-consul)
+
 # hiera-consul
 A Hiera backend to retrieve configuration from Hashicorp's Consul KV store
 
