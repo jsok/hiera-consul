@@ -3,7 +3,7 @@ require 'rubygems/package_task'
 
 spec = Gem::Specification.new do |gem|
     gem.name = "hiera-consul"
-    gem.version = "0.0.1"
+    gem.version = "0.0.2"
     gem.license = "Apache-2.0"
     gem.summary = "Module for using consul as a hiera backend"
     gem.email = "jonathan.sokolowski@gmail.com"
