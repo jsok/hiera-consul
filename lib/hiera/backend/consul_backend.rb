@@ -10,26 +10,34 @@ class Hiera
         require 'uri'
 
         @config = Config[:consul]
+
         if ENV['CONSUL_HTTP_ADDR']
-          # By convention the ENV var does not contain a scheme, but URI
-          # requires one. Net::HTTP will switch to https if configured later.
-          uri = URI('http://' + ENV['CONSUL_HTTP_ADDR'])
-          @consul = Net::HTTP.new(uri.host, uri.port)
-        elsif (@config[:host] && @config[:port])
-          @consul = Net::HTTP.new(@config[:host], @config[:port])
-        else
-          raise "[hiera-consul] Missing minimum configuration, please check hiera.yaml"
+          #TODO(jsok): Check CONSUL_HTTP_SSL and set scheme appropriately
+          scheme = 'http://'
+          address = ENV['CONSUL_HTTP_ADDR']
+          uri = URI("#{scheme}#{address}")
+          @config[:host] = uri.host
+          @config[:port] = uri.port
         end
-        @consul.read_timeout = @config[:http_read_timeout] || 10
-        @consul.open_timeout = @config[:http_connect_timeout] || 10
 
         begin
+          if (@config[:host] && @config[:port])
+            @consul = Net::HTTP.new(@config[:host], @config[:port])
+            @consul.read_timeout = @config[:http_read_timeout] || 10
+            @consul.open_timeout = @config[:http_connect_timeout] || 10
+            #TODO(jsok): Check CONSUL_HTTP_SSL_VERIFY and configure SSL certs
+          else
+            raise "host info not found in CONSUL_HTTP_ADDR or @config[:host,:port]"
+          end
+
           check_agent
           Hiera.debug("[hiera-consul] Client configured to connect to #{@consul.address}:#{@consul.port}")
+
         rescue Exception => e
           @consul = nil
           Hiera.warn("[hiera-consul] Skipping backend. Configuration error: #{e}")
         end
+
       end
 
       def lookup(key, scope, order_override, resolution_type)
