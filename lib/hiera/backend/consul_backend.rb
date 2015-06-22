@@ -20,14 +20,21 @@ class Hiera
         else
           raise "[hiera-consul] Missing minimum configuration, please check hiera.yaml"
         end
-
-        Hiera.debug("[hiera-consul] Client configured to connect to #{@consul.address}:#{@consul.port}")
-
         @consul.read_timeout = @config[:http_read_timeout] || 10
         @consul.open_timeout = @config[:http_connect_timeout] || 10
+
+        begin
+          check_agent
+          Hiera.debug("[hiera-consul] Client configured to connect to #{@consul.address}:#{@consul.port}")
+        rescue Exception => e
+          @consul = nil
+          Hiera.warn("[hiera-consul] Skipping backend. Configuration error: #{e}")
+        end
       end
 
       def lookup(key, scope, order_override, resolution_type)
+        return nil if @consul.nil?
+
         answer = nil
 
         paths = @config[:paths].map { |p| Backend.parse_string(p, scope, { 'key' => key }) }
@@ -76,7 +83,7 @@ class Hiera
               Hiera.debug("[hiera-consul] Could not read key: #{path}")
             end
           rescue Exception => e
-            Hiera.warn("[hiera-consul] Error occurred read value #{path}: #{e}")
+            Hiera.warn("[hiera-consul] Error occurred reading value #{path}: #{e}")
           end
 
           data
@@ -116,6 +123,14 @@ class Hiera
             newval
           end
         end
+      end
+
+      def check_agent
+        response = wrapquery("/v1/agent/self")
+        if response.nil?
+          raise "Client could not connect to #{@consul.address}:#{@consul.port}"
+        end
+        true
       end
 
     end
